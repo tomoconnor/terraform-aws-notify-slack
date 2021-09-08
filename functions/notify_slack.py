@@ -1,4 +1,5 @@
 from __future__ import print_function
+import certifi
 from urllib.error import HTTPError
 import os, boto3, json, base64
 import urllib.request, urllib.parse
@@ -63,6 +64,17 @@ def default_notification(subject, message):
 
   return attachments
 
+def asg_notification(message):
+  events = {'autoscaling:EC2_INSTANCE_LAUNCH': 'warning', 'autoscaling:EC2_INSTANCE_TERMINATE': 'warning', 'autoscaling:EC2_INSTANCE_LAUNCH_ERROR': 'danger', 'autoscaling:EC2_INSTANCE_TERMINATE_ERROR': 'danger'}
+  return {
+    "color": events[message['Event']],
+    "fallback": "ASG Notification triggered",
+    "fields": [
+      {"title": "Event", "value": message['Event'], "short": True },
+      {"title": "StatusCode", "value": message['StatusCode'], "short": True },
+      {"title": "Cause", "value": message['Cause'], "short": False },
+    ]
+  }
 
 # Send a message to a slack channel
 def notify_slack(subject, message, region):
@@ -88,11 +100,13 @@ def notify_slack(subject, message, region):
       logging.exception(f'JSON decode error: {err}')
 
   if "AlarmName" in message:
-    notification = cloudwatch_notification(message, region)
     payload['text'] = "AWS CloudWatch notification - " + message["AlarmName"]
     payload['attachments'].append(notification)
   elif "attachments" in message or "text" in message:
     payload = {**payload, **message}
+  elif "AutoScalingGroupARN" in message:
+    payload['text'] = "*{0}*: {1}".format(message["AutoScalingGroupName"], message["Description"])
+    payload['attachments'].append(asg_notification(message))
   else:
     payload['text'] = "AWS notification"
     payload['attachments'].append(default_notification(subject, message))
@@ -101,7 +115,7 @@ def notify_slack(subject, message, region):
   req = urllib.request.Request(slack_url)
 
   try:
-    result = urllib.request.urlopen(req, data)
+    result = urllib.request.urlopen(req, data, cafile=certifi.where())
     return json.dumps({"code": result.getcode(), "info": result.info().as_string()})
 
   except HTTPError as e:
