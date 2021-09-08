@@ -1,5 +1,4 @@
 from __future__ import print_function
-import certifi
 from urllib.error import HTTPError
 import os, boto3, json, base64
 import urllib.request, urllib.parse
@@ -115,7 +114,7 @@ def notify_slack(subject, message, region):
   req = urllib.request.Request(slack_url)
 
   try:
-    result = urllib.request.urlopen(req, data, cafile=certifi.where())
+    result = urllib.request.urlopen(req, data)
     return json.dumps({"code": result.getcode(), "info": result.info().as_string()})
 
   except HTTPError as e:
