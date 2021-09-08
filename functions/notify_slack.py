@@ -78,7 +78,7 @@ def asg_notification(message):
 # Send a message to a slack channel
 def notify_slack(subject, message, region):
   slack_url = os.environ['SLACK_WEBHOOK_URL']
-  if not slack_url.startswith("http"):
+  if not slack_url.startswith("https"):
     slack_url = decrypt(slack_url)
 
   slack_channel = os.environ['SLACK_CHANNEL']
