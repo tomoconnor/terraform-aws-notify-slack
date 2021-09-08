@@ -99,6 +99,7 @@ def notify_slack(subject, message, region):
       logging.exception(f'JSON decode error: {err}')
 
   if "AlarmName" in message:
+    notification = cloudwatch_notification(message, region)
     payload['text'] = "AWS CloudWatch notification - " + message["AlarmName"]
     payload['attachments'].append(notification)
   elif "attachments" in message or "text" in message:
